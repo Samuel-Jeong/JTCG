@@ -1,5 +1,20 @@
 package com.jtcg.parse;
 
+import com.github.javaparser.StaticJavaParser;
+import com.github.javaparser.ast.CompilationUnit;
+import com.github.javaparser.ast.expr.AnnotationExpr;
+import com.github.javaparser.ast.expr.ArrayInitializerExpr;
+import com.github.javaparser.ast.expr.Expression;
+import com.github.javaparser.ast.expr.FieldAccessExpr;
+import com.github.javaparser.ast.expr.MemberValuePair;
+import com.github.javaparser.ast.expr.NameExpr;
+import com.github.javaparser.ast.expr.NormalAnnotationExpr;
+import com.github.javaparser.ast.expr.SingleMemberAnnotationExpr;
+import com.github.javaparser.ast.expr.StringLiteralExpr;
+import com.github.javaparser.ast.nodeTypes.NodeWithAnnotations;
+import com.github.javaparser.ast.type.ClassOrInterfaceType;
+import com.github.javaparser.ast.type.Type;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -35,6 +50,19 @@ public final class JavaSourceParser {
 
     private static final Pattern FIRST_STRING_LITERAL = Pattern.compile("\"([^\"]*)\"");
     private static final Pattern REQUEST_METHOD = Pattern.compile("RequestMethod\\.(GET|POST|PUT|DELETE|PATCH)");
+
+    // 컨트롤러/서비스에서 의존 주입으로 보이는 필드 선언을 매우 단순하게 잡아냅니다.
+    // ex) private final FooService fooService;
+    private static final Pattern PRIVATE_FINAL_FIELD = Pattern.compile(
+            "^\\s*private\\s+final\\s+([^;=]+?)\\s+[A-Za-z_][A-Za-z0-9_]*\\s*;",
+            Pattern.MULTILINE
+    );
+
+    // ex) @Autowired\n private FooService fooService;
+    private static final Pattern AUTOWIRED_FIELD = Pattern.compile(
+            "^\\s*@Autowired\\s*\\R\\s*private\\s+([^;=]+?)\\s+[A-Za-z_][A-Za-z0-9_]*\\s*;",
+            Pattern.MULTILINE
+    );
 
     /**
      * 파일을 UTF-8로 읽고, 패키지/타입명/공개 메서드명을 추출합니다.
@@ -91,7 +119,13 @@ public final class JavaSourceParser {
 
         List<JavaMethodInfo> publicMethods = new ArrayList<>();
         List<JavaEndpointInfo> endpoints = new ArrayList<>();
+        List<String> injectedDependencyTypeNames = new ArrayList<>();
         if (typeName != null) {
+            // 아주 단순한 의존성 추출(필드 기반). Lombok 생성자 주입(@RequiredArgsConstructor) 케이스도
+            // `private final` 필드를 통해 일부 커버할 수 있습니다.
+            String body = src.substring(Math.max(0, typeStart));
+            collectInjectedTypes(body, injectedDependencyTypeNames);
+
             Matcher mm = PUBLIC_METHOD_START.matcher(src);
             while (mm.find()) {
                 String methodName = mm.group(1);
@@ -117,12 +151,38 @@ public final class JavaSourceParser {
 
                 publicMethods.add(new JavaMethodInfo(methodName, paramCount));
 
-                if (componentType == JavaComponentType.CONTROLLER) {
-                    int lineIndex = lineIndexAt(src, mm.start());
-                    EndpointAnn ann = findEndpointAnnotationNear(src, lineIndex);
-                    if (ann != null) {
-                        String fullPath = joinPaths(controllerBasePath, ann.path);
-                        endpoints.add(new JavaEndpointInfo(ann.httpMethod, fullPath, methodName, paramCount));
+                // 엔드포인트 추출은 AST 기반 루틴에서 한 번에 처리합니다(정규식 기반은 fallback로만 사용).
+            }
+
+            if (componentType == JavaComponentType.CONTROLLER) {
+                List<JavaEndpointInfo> astEndpoints = parseControllerEndpointsWithAst(src, controllerBasePath);
+                if (!astEndpoints.isEmpty()) {
+                    endpoints = new ArrayList<>(astEndpoints);
+                } else {
+                    // fallback: 기존 라인 기반 추출
+                    Matcher mm2 = PUBLIC_METHOD_START.matcher(src);
+                    while (mm2.find()) {
+                        String methodName = mm2.group(1);
+                        if (methodName.equals(typeName)) {
+                            continue;
+                        }
+                        int openParenIndex = mm2.end() - 1;
+                        int closeParenIndex = findMatchingParen(src, openParenIndex);
+                        if (closeParenIndex < 0) {
+                            continue;
+                        }
+                        String paramList = src.substring(openParenIndex + 1, closeParenIndex);
+                        int paramCount = countParams(paramList);
+                        if (!looksLikeMethodBodyStartsAfter(src, closeParenIndex + 1)) {
+                            continue;
+                        }
+
+                        int lineIndex = lineIndexAt(src, mm2.start());
+                        EndpointAnn ann = findEndpointAnnotationNear(src, lineIndex);
+                        if (ann != null) {
+                            String fullPath = joinPaths(controllerBasePath, ann.path);
+                            endpoints.add(new JavaEndpointInfo(ann.httpMethod, fullPath, methodName, paramCount, null, null));
+                        }
                     }
                 }
             }
@@ -133,8 +193,240 @@ public final class JavaSourceParser {
                 typeName,
                 componentType,
                 List.copyOf(publicMethods),
-                List.copyOf(endpoints)
+                List.copyOf(endpoints),
+                List.copyOf(injectedDependencyTypeNames)
         );
+    }
+
+    private static List<JavaEndpointInfo> parseControllerEndpointsWithAst(String src, String controllerBasePath) {
+        try {
+            CompilationUnit cu = StaticJavaParser.parse(src);
+
+            // 클래스 레벨 @RequestMapping은 controllerBasePath(텍스트 기반)로 이미 어느 정도 잡혔으므로 그대로 사용합니다.
+            List<JavaEndpointInfo> out = new ArrayList<>();
+
+            cu.findAll(com.github.javaparser.ast.body.MethodDeclaration.class).forEach(md -> {
+                String httpMethod = null;
+                String path = null;
+
+                for (AnnotationExpr ann : md.getAnnotations()) {
+                    String simple = ann.getName().getIdentifier();
+                    if (simple.endsWith("GetMapping")) {
+                        httpMethod = "GET";
+                        path = extractPathFromAnnotation(ann);
+                    } else if (simple.endsWith("PostMapping")) {
+                        httpMethod = "POST";
+                        path = extractPathFromAnnotation(ann);
+                    } else if (simple.endsWith("PutMapping")) {
+                        httpMethod = "PUT";
+                        path = extractPathFromAnnotation(ann);
+                    } else if (simple.endsWith("DeleteMapping")) {
+                        httpMethod = "DELETE";
+                        path = extractPathFromAnnotation(ann);
+                    } else if (simple.endsWith("PatchMapping")) {
+                        httpMethod = "PATCH";
+                        path = extractPathFromAnnotation(ann);
+                    } else if (simple.endsWith("RequestMapping")) {
+                        httpMethod = extractRequestMethodFromRequestMapping(ann);
+                        path = extractPathFromAnnotation(ann);
+                    }
+                }
+
+                if (httpMethod == null) {
+                    return;
+                }
+
+                String fullPath = joinPaths(controllerBasePath, defaultPath(path));
+
+                String requestBodyType = md.getParameters().stream()
+                        .filter(p -> hasAnnotation(p, "RequestBody"))
+                        .findFirst()
+                        .map(p -> p.getType().toString())
+                        .orElse(null);
+
+                String responseBodyType = unwrapResponseType(md.getType());
+
+                out.add(new JavaEndpointInfo(
+                        httpMethod,
+                        fullPath,
+                        md.getNameAsString(),
+                        md.getParameters().size(),
+                        requestBodyType,
+                        responseBodyType
+                ));
+            });
+
+            return out;
+        } catch (Exception e) {
+            return List.of();
+        }
+    }
+
+    private static boolean hasAnnotation(NodeWithAnnotations<?> node, String simpleName) {
+        if (node == null) {
+            return false;
+        }
+        for (AnnotationExpr a : node.getAnnotations()) {
+            if (a.getName().getIdentifier().equals(simpleName)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static String extractPathFromAnnotation(AnnotationExpr ann) {
+        if (ann == null) {
+            return null;
+        }
+        if (ann instanceof SingleMemberAnnotationExpr sma) {
+            return firstStringLiteral(sma.getMemberValue());
+        }
+        if (ann instanceof NormalAnnotationExpr na) {
+            for (MemberValuePair p : na.getPairs()) {
+                String k = p.getNameAsString();
+                if (k.equals("value") || k.equals("path")) {
+                    return firstStringLiteral(p.getValue());
+                }
+            }
+        }
+        return null;
+    }
+
+    private static String firstStringLiteral(Expression expr) {
+        if (expr == null) {
+            return null;
+        }
+        if (expr instanceof StringLiteralExpr s) {
+            return s.getValue();
+        }
+        if (expr instanceof ArrayInitializerExpr a) {
+            for (Expression e : a.getValues()) {
+                String v = firstStringLiteral(e);
+                if (v != null) {
+                    return v;
+                }
+            }
+        }
+        return null;
+    }
+
+    private static String extractRequestMethodFromRequestMapping(AnnotationExpr ann) {
+        if (ann instanceof NormalAnnotationExpr na) {
+            for (MemberValuePair p : na.getPairs()) {
+                if (!p.getNameAsString().equals("method")) {
+                    continue;
+                }
+                String m = firstRequestMethodToken(p.getValue());
+                if (m != null) {
+                    return m;
+                }
+            }
+        }
+        return "GET";
+    }
+
+    private static String firstRequestMethodToken(Expression expr) {
+        if (expr == null) {
+            return null;
+        }
+        if (expr instanceof FieldAccessExpr fa) {
+            return fa.getNameAsString();
+        }
+        if (expr instanceof NameExpr ne) {
+            return ne.getNameAsString();
+        }
+        if (expr instanceof ArrayInitializerExpr a) {
+            for (Expression e : a.getValues()) {
+                String v = firstRequestMethodToken(e);
+                if (v != null) {
+                    return v;
+                }
+            }
+        }
+        return null;
+    }
+
+    private static String unwrapResponseType(Type t) {
+        if (t == null) {
+            return null;
+        }
+        if (t.isVoidType()) {
+            return "void";
+        }
+        if (t.isPrimitiveType()) {
+            return t.toString();
+        }
+        if (t instanceof ClassOrInterfaceType c) {
+            String name = c.getName().getIdentifier();
+            if ((name.equals("ResponseEntity") || name.equals("HttpEntity")) && c.getTypeArguments().isPresent()) {
+                var args = c.getTypeArguments().get();
+                if (!args.isEmpty()) {
+                    return args.get(0).toString();
+                }
+            }
+        }
+        return t.toString();
+    }
+
+    private static void collectInjectedTypes(String srcAfterTypeStart, List<String> out) {
+        if (srcAfterTypeStart == null || out == null) {
+            return;
+        }
+
+        Matcher mf = PRIVATE_FINAL_FIELD.matcher(srcAfterTypeStart);
+        while (mf.find()) {
+            String type = normalizeTypeName(mf.group(1));
+            if (type != null && !type.isBlank() && !out.contains(type)) {
+                out.add(type);
+            }
+        }
+
+        Matcher ma = AUTOWIRED_FIELD.matcher(srcAfterTypeStart);
+        while (ma.find()) {
+            String type = normalizeTypeName(ma.group(1));
+            if (type != null && !type.isBlank() && !out.contains(type)) {
+                out.add(type);
+            }
+        }
+    }
+
+    /**
+     * 필드/파라미터의 타입 문자열에서 제네릭/어노테이션/배열 등을 대충 제거하고 단순 타입명만 남깁니다.
+     *
+     * <p>정규식 기반 도구의 한계 때문에 100% 정확도를 목표로 하지 않습니다.
+     */
+    private static String normalizeTypeName(String rawType) {
+        if (rawType == null) {
+            return null;
+        }
+        String t = rawType.trim();
+        if (t.isEmpty()) {
+            return null;
+        }
+
+        // 어노테이션/키워드 같은 토큰 제거(매우 단순)
+        t = t.replaceAll("@\\w+(\\([^)]*\\))?\\s*", "");
+        t = t.replace("final ", "").replace("static ", "");
+
+        // 제네릭 제거: Foo<Bar> -> Foo
+        int gen = t.indexOf('<');
+        if (gen >= 0) {
+            t = t.substring(0, gen).trim();
+        }
+
+        // 배열/varargs 일부 처리: Foo[] / Foo... -> Foo
+        t = t.replace("[]", "");
+        if (t.endsWith("...")) {
+            t = t.substring(0, t.length() - 3);
+        }
+        t = t.trim();
+
+        // fully-qualified -> simple
+        int dot = t.lastIndexOf('.');
+        if (dot >= 0 && dot + 1 < t.length()) {
+            t = t.substring(dot + 1);
+        }
+        return t.trim();
     }
 
     private static boolean isControllerAnnotation(String line) {

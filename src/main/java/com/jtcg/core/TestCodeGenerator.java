@@ -3,6 +3,7 @@ package com.jtcg.core;
 import com.jtcg.parse.JavaSourceInfo;
 import com.jtcg.parse.JavaSourceParser;
 import com.jtcg.parse.JavaComponentType;
+import com.jtcg.parse.DtoIndex;
 import com.jtcg.render.GeneratedTestSupportFiles;
 import com.jtcg.render.JunitTestRenderer;
 
@@ -64,6 +65,10 @@ public final class TestCodeGenerator {
         JavaSourceParser parser = new JavaSourceParser();
         JunitTestRenderer renderer = new JunitTestRenderer();
 
+        // 입력 소스 트리에서 DTO(요청/응답)에 해당할 수 있는 타입 정보를 전수 조사합니다.
+        // (Controller 테스트의 JSON 바디/응답 jsonPath assert 생성에 사용)
+        DtoIndex dtoIndex = DtoIndex.build(inputDir, javaFiles);
+
         // 생성된 테스트들이 공통으로 사용하는 유틸을 출력 루트에 한 번 생성합니다.
         writeSupportFiles(outputDir, options.overwrite());
 
@@ -85,7 +90,7 @@ public final class TestCodeGenerator {
                 continue;
             }
 
-            String testCode = renderer.render(info);
+            String testCode = renderer.render(info, dtoIndex);
             Path outFile = outputPathFor(outputDir, info.packageName(), info.typeName() + "Test.java");
             try {
                 Files.createDirectories(outFile.getParent());

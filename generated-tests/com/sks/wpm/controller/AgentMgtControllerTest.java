@@ -2,9 +2,12 @@ package com.sks.wpm.controller;
 
 import com.jtcg.generated.support.ControllerTestSupport;
 
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -12,15 +15,18 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+@WebMvcTest(controllers = AgentMgtController.class)
+@AutoConfigureMockMvc(addFilters = false)
 class AgentMgtControllerTest {
 
-    private MockMvc mockMvc() {
-        return ControllerTestSupport.mockMvcFor(AgentMgtController.class);
-    }
+    @Autowired
+    private MockMvc mvc;
+
+    @MockBean
+    private AgentMgtService agentMgtService;
 
     @Test
     void api_getContractInfo__2params__GET() throws Exception {
-        MockMvc mvc = mockMvc();
         String path = ControllerTestSupport.fillPathVariables("/agent/contract/{contractNo}");
         MockHttpServletRequestBuilder req = MockMvcRequestBuilders.get(path)
                 .accept(MediaType.APPLICATION_JSON);
@@ -30,7 +36,6 @@ class AgentMgtControllerTest {
 
     @Test
     void api_getDeviceList__2params__GET() throws Exception {
-        MockMvc mvc = mockMvc();
         String path = ControllerTestSupport.fillPathVariables("/agent/contract/{contractNo}/device/list");
         MockHttpServletRequestBuilder req = MockMvcRequestBuilders.get(path)
                 .accept(MediaType.APPLICATION_JSON);
@@ -40,7 +45,6 @@ class AgentMgtControllerTest {
 
     @Test
     void api_getDeviceInfo__2params__GET() throws Exception {
-        MockMvc mvc = mockMvc();
         String path = ControllerTestSupport.fillPathVariables("/agent/contract/{contractNo}/device/{deviceIdx}");
         MockHttpServletRequestBuilder req = MockMvcRequestBuilders.get(path)
                 .accept(MediaType.APPLICATION_JSON);

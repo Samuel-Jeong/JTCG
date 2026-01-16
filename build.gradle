@@ -16,6 +16,7 @@ repositories {
 }
 
 dependencies {
+    implementation 'com.github.javaparser:javaparser-core:3.25.10'
     testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
 }
 
@@ -30,4 +31,19 @@ jar {
                 'Main-Class': 'com.jtcg.cli.TestCodeGeneratorApp'
         )
     }
+
+    // IMPORTANT:
+    // This tool is executed via `java -jar build/libs/jtcg.jar`.
+    // The default Gradle `jar` task does NOT include runtime dependencies, which caused
+    // `NoClassDefFoundError` at runtime (e.g., JavaParser classes).
+    //
+    // So we build an "uber/fat" JAR by embedding the runtime classpath into the output.
+    // This keeps the CLI runnable without requiring users to manually assemble a classpath.
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+
+    // Drop signature files that can break fat-jar packaging.
+    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
 }

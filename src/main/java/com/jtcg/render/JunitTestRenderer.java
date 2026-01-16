@@ -2,6 +2,7 @@ package com.jtcg.render;
 
 import com.jtcg.parse.JavaMethodInfo;
 import com.jtcg.parse.JavaSourceInfo;
+import com.jtcg.parse.DtoIndex;
 
 import java.util.List;
 
@@ -22,15 +23,22 @@ public final class JunitTestRenderer {
      *
      * <p>공개 메서드가 하나도 잡히지 않는 경우에도 빈 파일이 되지 않도록 `placeholder` 테스트를 생성합니다.
      */
-    public String render(JavaSourceInfo info) {
+    public String render(JavaSourceInfo info, DtoIndex dtoIndex) {
         if (info.componentType() == null) {
             return renderServiceTest(info);
         }
         return switch (info.componentType()) {
-            case CONTROLLER -> renderControllerTest(info);
+            case CONTROLLER -> renderControllerTest(info, dtoIndex);
             case SERVICE -> renderServiceTest(info);
             case OTHER -> renderServiceTest(info);
         };
+    }
+
+    /**
+     * 이전 버전과의 호환을 위해 DTO 인덱스 없이도 호출 가능하게 둡니다.
+     */
+    public String render(JavaSourceInfo info) {
+        return render(info, null);
     }
 
     private String renderServiceTest(JavaSourceInfo info) {
@@ -80,16 +88,12 @@ public final class JunitTestRenderer {
                         .append(escapeJavaString(name))
                         .append("\");\n");
 
-                out.append("        Object target = ReflectionTestSupport.targetOrNullFor(method, ")
+                out.append("        ReflectionTestSupport.InvocationPlan plan = ReflectionTestSupport.planInvocation(method, ")
                         .append(info.typeName())
                         .append(".class);\n");
-                out.append("        if (!java.lang.reflect.Modifier.isStatic(method.getModifiers())) {\n");
-                out.append("            Assumptions.assumeTrue(target != null, \"No default constructor: ")
-                        .append(info.typeName())
-                        .append("\");\n");
-                out.append("        }\n\n");
+                out.append("        Assumptions.assumeTrue(plan.skipReason == null, plan.skipReason);\n\n");
 
-                out.append("        Object result = assertDoesNotThrow(() -> ReflectionTestSupport.invokeWithDefaults(method, target));\n");
+                out.append("        Object result = assertDoesNotThrow(() -> ReflectionTestSupport.invoke(method, plan.target, plan.args));\n");
                 out.append("        if (method.getReturnType() != void.class && !method.getReturnType().isPrimitive()) {\n");
                 out.append("            assertNotNull(result);\n");
                 out.append("        }\n");
@@ -101,7 +105,7 @@ public final class JunitTestRenderer {
         return out.toString();
     }
 
-    private String renderControllerTest(JavaSourceInfo info) {
+    private String renderControllerTest(JavaSourceInfo info, DtoIndex dtoIndex) {
         StringBuilder out = new StringBuilder();
         if (info.packageName() != null && !info.packageName().isBlank()) {
             out.append("package ").append(info.packageName()).append(";\n\n");
@@ -109,9 +113,12 @@ public final class JunitTestRenderer {
 
         out.append("import com.jtcg.generated.support.ControllerTestSupport;\n\n");
 
-        out.append("import org.junit.jupiter.api.Assumptions;\n");
         out.append("import org.junit.jupiter.api.Test;\n\n");
 
+        out.append("import org.springframework.beans.factory.annotation.Autowired;\n");
+        out.append("import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;\n");
+        out.append("import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;\n");
+        out.append("import org.springframework.boot.test.mock.mockito.MockBean;\n");
         out.append("import org.springframework.http.MediaType;\n");
         out.append("import org.springframework.test.web.servlet.MockMvc;\n");
         out.append("import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;\n");
@@ -120,18 +127,34 @@ public final class JunitTestRenderer {
         out.append("import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;\n\n");
 
         String testClassName = info.typeName() + "Test";
+
+        out.append("@WebMvcTest(controllers = ").append(info.typeName()).append(".class)\n");
+        // 보안 필터가 있는 프로젝트에서도 최소한 테스트가 뜰 수 있도록 기본값으로 필터를 끕니다.
+        // (사용자가 실제 보안 동작까지 검증하고 싶다면 추후 옵션으로 조절)
+        out.append("@AutoConfigureMockMvc(addFilters = false)\n");
         out.append("class ").append(testClassName).append(" {\n\n");
 
-        out.append("    private MockMvc mockMvc() {\n");
-        out.append("        return ControllerTestSupport.mockMvcFor(").append(info.typeName()).append(".class);\n");
-        out.append("    }\n\n");
+        out.append("    @Autowired\n");
+        out.append("    private MockMvc mvc;\n\n");
+
+        // 컨트롤러가 주입 받는 의존성이 있으면, WebMvcTest 컨텍스트가 뜨도록 MockBean으로 등록합니다.
+        var deps = info.injectedDependencyTypeNames();
+        if (deps != null) {
+            for (String depType : deps) {
+                if (depType == null || depType.isBlank()) {
+                    continue;
+                }
+                out.append("    @MockBean\n");
+                out.append("    private ").append(depType).append(" ").append(toFieldName(depType)).append(";\n\n");
+            }
+        }
 
         var endpoints = info.endpoints();
         if (endpoints == null || endpoints.isEmpty()) {
             out.append("    @Test\n");
             out.append("    void placeholder() {\n");
             out.append("        // no endpoint mappings found by parser\n");
-            out.append("        Assumptions.assumeTrue(true);\n");
+            out.append("        // (generated placeholder)\n");
             out.append("    }\n\n");
         } else {
             for (var ep : endpoints) {
@@ -148,7 +171,6 @@ public final class JunitTestRenderer {
                         .append("params__")
                         .append(sanitize(httpMethod))
                         .append("() throws Exception {\n");
-                out.append("        MockMvc mvc = mockMvc();\n");
                 out.append("        String path = ControllerTestSupport.fillPathVariables(\"")
                         .append(escapeJavaString(path))
                         .append("\");\n");
@@ -159,12 +181,30 @@ public final class JunitTestRenderer {
 
                 String hm = httpMethod == null ? "GET" : httpMethod.toUpperCase();
                 if (hm.equals("POST") || hm.equals("PUT") || hm.equals("PATCH")) {
-                    out.append("\n                .contentType(MediaType.APPLICATION_JSON)\n                .content(\"{}\")");
+                    out.append("\n                .contentType(MediaType.APPLICATION_JSON)");
+                    String body = buildJsonBodyFor(ep.requestBodyType(), dtoIndex);
+                    out.append("\n                .content(\"").append(escapeJavaString(body)).append("\")");
                 }
 
                 out.append(";\n");
                 out.append("        mvc.perform(req)\n");
-                out.append("                .andExpect(status().is2xxSuccessful());\n");
+                out.append("                .andExpect(status().is2xxSuccessful())");
+
+                // JSON 응답 타입을 추정할 수 있으면 최소한의 구조 검증을 추가합니다.
+                DtoIndex.DtoInfo dto = dtoIndex == null ? null : dtoIndex.findBySimpleName(ep.responseBodyType());
+                if (dto != null && dto.fields() != null && !dto.fields().isEmpty()) {
+                    out.append("\n                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))");
+                    for (var f : dto.fields()) {
+                        if (f == null || f.name() == null || f.name().isBlank()) {
+                            continue;
+                        }
+                        out.append("\n                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath(\"$.")
+                                .append(escapeJavaString(f.name()))
+                                .append("\").exists())");
+                    }
+                }
+
+                out.append(";\n");
                 out.append("    }\n\n");
             }
         }
@@ -182,6 +222,15 @@ public final class JunitTestRenderer {
 
         out.append("}\n");
         return out.toString();
+    }
+
+    private static String toFieldName(String simpleTypeName) {
+        if (simpleTypeName == null || simpleTypeName.isBlank()) {
+            return "dep";
+        }
+        String s = simpleTypeName.trim();
+        // FooService -> fooService
+        return Character.toLowerCase(s.charAt(0)) + s.substring(1);
     }
 
     private static String toMockMvcBuilderMethod(String httpMethod) {
@@ -207,5 +256,74 @@ public final class JunitTestRenderer {
     private static String sanitize(String s) {
         // JUnit 메서드명으로 무난하게 사용: 식별자에 쓰기 곤란한 문자를 '_'로 치환
         return s.replaceAll("[^A-Za-z0-9_]", "_");
+    }
+
+    private static String buildJsonBodyFor(String requestBodyType, DtoIndex dtoIndex) {
+        if (requestBodyType == null || requestBodyType.isBlank()) {
+            return "{}";
+        }
+        if (dtoIndex == null) {
+            return "{}";
+        }
+
+        DtoIndex.DtoInfo dto = dtoIndex.findBySimpleName(requestBodyType);
+        if (dto == null || dto.fields() == null || dto.fields().isEmpty()) {
+            return "{}";
+        }
+
+        StringBuilder json = new StringBuilder();
+        json.append("{");
+        boolean first = true;
+        for (DtoIndex.DtoField f : dto.fields()) {
+            if (f == null || f.name() == null || f.name().isBlank()) {
+                continue;
+            }
+            if (!first) {
+                json.append(',');
+            }
+            first = false;
+            json.append('"').append(escapeJson(f.name())).append('"').append(':');
+            json.append(defaultJsonValueForType(f.type()));
+        }
+        json.append('}');
+        return json.toString();
+    }
+
+    private static String defaultJsonValueForType(String javaType) {
+        if (javaType == null) {
+            return "null";
+        }
+        String t = javaType.trim();
+
+        // 제네릭 제거
+        int gen = t.indexOf('<');
+        if (gen >= 0) {
+            t = t.substring(0, gen).trim();
+        }
+        int dot = t.lastIndexOf('.');
+        if (dot >= 0 && dot + 1 < t.length()) {
+            t = t.substring(dot + 1);
+        }
+
+        return switch (t) {
+            case "String", "CharSequence" -> "\"\"";
+            case "boolean", "Boolean" -> "false";
+            case "byte", "short", "int", "long", "float", "double",
+                 "Byte", "Short", "Integer", "Long", "Float", "Double" -> "0";
+            default -> {
+                // 컬렉션/배열처럼 보이면 빈 배열, 그 외는 null
+                if (t.endsWith("[]") || t.equals("List") || t.equals("Set") || t.equals("Collection")) {
+                    yield "[]";
+                }
+                yield "null";
+            }
+        };
+    }
+
+    private static String escapeJson(String s) {
+        if (s == null) {
+            return "";
+        }
+        return s.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 }

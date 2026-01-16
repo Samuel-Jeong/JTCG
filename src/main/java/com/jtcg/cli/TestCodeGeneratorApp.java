@@ -28,7 +28,8 @@ public final class TestCodeGeneratorApp {
         GenerationOptions options = new GenerationOptions(
                 Path.of(parsed.inputDir),
                 Path.of(parsed.outputDir),
-                parsed.overwrite
+                parsed.overwrite,
+                parsed.classpath
         );
 
         int generated = new TestCodeGenerator().generate(options);

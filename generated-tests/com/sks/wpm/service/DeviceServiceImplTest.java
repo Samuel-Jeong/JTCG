@@ -16,12 +16,10 @@ class DeviceServiceImplTest {
     void test_registerDevice__2params() throws Exception {
         Method method = ReflectionTestSupport.findMethod(DeviceServiceImpl.class, "registerDevice", 2);
         Assumptions.assumeTrue(method != null, "Method not found by reflection: registerDevice");
-        Object target = ReflectionTestSupport.targetOrNullFor(method, DeviceServiceImpl.class);
-        if (!java.lang.reflect.Modifier.isStatic(method.getModifiers())) {
-            Assumptions.assumeTrue(target != null, "No default constructor: DeviceServiceImpl");
-        }
+        ReflectionTestSupport.InvocationPlan plan = ReflectionTestSupport.planInvocation(method, DeviceServiceImpl.class);
+        Assumptions.assumeTrue(plan.skipReason == null, plan.skipReason);
 
-        Object result = assertDoesNotThrow(() -> ReflectionTestSupport.invokeWithDefaults(method, target));
+        Object result = assertDoesNotThrow(() -> ReflectionTestSupport.invoke(method, plan.target, plan.args));
         if (method.getReturnType() != void.class && !method.getReturnType().isPrimitive()) {
             assertNotNull(result);
         }
@@ -31,12 +29,10 @@ class DeviceServiceImplTest {
     void test_checkDeviceRegistration__2params() throws Exception {
         Method method = ReflectionTestSupport.findMethod(DeviceServiceImpl.class, "checkDeviceRegistration", 2);
         Assumptions.assumeTrue(method != null, "Method not found by reflection: checkDeviceRegistration");
-        Object target = ReflectionTestSupport.targetOrNullFor(method, DeviceServiceImpl.class);
-        if (!java.lang.reflect.Modifier.isStatic(method.getModifiers())) {
-            Assumptions.assumeTrue(target != null, "No default constructor: DeviceServiceImpl");
-        }
+        ReflectionTestSupport.InvocationPlan plan = ReflectionTestSupport.planInvocation(method, DeviceServiceImpl.class);
+        Assumptions.assumeTrue(plan.skipReason == null, plan.skipReason);
 
-        Object result = assertDoesNotThrow(() -> ReflectionTestSupport.invokeWithDefaults(method, target));
+        Object result = assertDoesNotThrow(() -> ReflectionTestSupport.invoke(method, plan.target, plan.args));
         if (method.getReturnType() != void.class && !method.getReturnType().isPrimitive()) {
             assertNotNull(result);
         }
@@ -46,12 +42,10 @@ class DeviceServiceImplTest {
     void test_getDeviceNetwork__2params() throws Exception {
         Method method = ReflectionTestSupport.findMethod(DeviceServiceImpl.class, "getDeviceNetwork", 2);
         Assumptions.assumeTrue(method != null, "Method not found by reflection: getDeviceNetwork");
-        Object target = ReflectionTestSupport.targetOrNullFor(method, DeviceServiceImpl.class);
-        if (!java.lang.reflect.Modifier.isStatic(method.getModifiers())) {
-            Assumptions.assumeTrue(target != null, "No default constructor: DeviceServiceImpl");
-        }
+        ReflectionTestSupport.InvocationPlan plan = ReflectionTestSupport.planInvocation(method, DeviceServiceImpl.class);
+        Assumptions.assumeTrue(plan.skipReason == null, plan.skipReason);
 
-        Object result = assertDoesNotThrow(() -> ReflectionTestSupport.invokeWithDefaults(method, target));
+        Object result = assertDoesNotThrow(() -> ReflectionTestSupport.invoke(method, plan.target, plan.args));
         if (method.getReturnType() != void.class && !method.getReturnType().isPrimitive()) {
             assertNotNull(result);
         }
@@ -61,12 +55,10 @@ class DeviceServiceImplTest {
     void test_getDeviceAction__2params() throws Exception {
         Method method = ReflectionTestSupport.findMethod(DeviceServiceImpl.class, "getDeviceAction", 2);
         Assumptions.assumeTrue(method != null, "Method not found by reflection: getDeviceAction");
-        Object target = ReflectionTestSupport.targetOrNullFor(method, DeviceServiceImpl.class);
-        if (!java.lang.reflect.Modifier.isStatic(method.getModifiers())) {
-            Assumptions.assumeTrue(target != null, "No default constructor: DeviceServiceImpl");
-        }
+        ReflectionTestSupport.InvocationPlan plan = ReflectionTestSupport.planInvocation(method, DeviceServiceImpl.class);
+        Assumptions.assumeTrue(plan.skipReason == null, plan.skipReason);
 
-        Object result = assertDoesNotThrow(() -> ReflectionTestSupport.invokeWithDefaults(method, target));
+        Object result = assertDoesNotThrow(() -> ReflectionTestSupport.invoke(method, plan.target, plan.args));
         if (method.getReturnType() != void.class && !method.getReturnType().isPrimitive()) {
             assertNotNull(result);
         }
@@ -76,12 +68,10 @@ class DeviceServiceImplTest {
     void test_controlDevice__3params() throws Exception {
         Method method = ReflectionTestSupport.findMethod(DeviceServiceImpl.class, "controlDevice", 3);
         Assumptions.assumeTrue(method != null, "Method not found by reflection: controlDevice");
-        Object target = ReflectionTestSupport.targetOrNullFor(method, DeviceServiceImpl.class);
-        if (!java.lang.reflect.Modifier.isStatic(method.getModifiers())) {
-            Assumptions.assumeTrue(target != null, "No default constructor: DeviceServiceImpl");
-        }
+        ReflectionTestSupport.InvocationPlan plan = ReflectionTestSupport.planInvocation(method, DeviceServiceImpl.class);
+        Assumptions.assumeTrue(plan.skipReason == null, plan.skipReason);
 
-        Object result = assertDoesNotThrow(() -> ReflectionTestSupport.invokeWithDefaults(method, target));
+        Object result = assertDoesNotThrow(() -> ReflectionTestSupport.invoke(method, plan.target, plan.args));
         if (method.getReturnType() != void.class && !method.getReturnType().isPrimitive()) {
             assertNotNull(result);
         }
@@ -91,12 +81,10 @@ class DeviceServiceImplTest {
     void test_completeDevice__2params() throws Exception {
         Method method = ReflectionTestSupport.findMethod(DeviceServiceImpl.class, "completeDevice", 2);
         Assumptions.assumeTrue(method != null, "Method not found by reflection: completeDevice");
-        Object target = ReflectionTestSupport.targetOrNullFor(method, DeviceServiceImpl.class);
-        if (!java.lang.reflect.Modifier.isStatic(method.getModifiers())) {
-            Assumptions.assumeTrue(target != null, "No default constructor: DeviceServiceImpl");
-        }
+        ReflectionTestSupport.InvocationPlan plan = ReflectionTestSupport.planInvocation(method, DeviceServiceImpl.class);
+        Assumptions.assumeTrue(plan.skipReason == null, plan.skipReason);
 
-        Object result = assertDoesNotThrow(() -> ReflectionTestSupport.invokeWithDefaults(method, target));
+        Object result = assertDoesNotThrow(() -> ReflectionTestSupport.invoke(method, plan.target, plan.args));
         if (method.getReturnType() != void.class && !method.getReturnType().isPrimitive()) {
             assertNotNull(result);
         }
@@ -106,12 +94,10 @@ class DeviceServiceImplTest {
     void test_scanDevice__2params() throws Exception {
         Method method = ReflectionTestSupport.findMethod(DeviceServiceImpl.class, "scanDevice", 2);
         Assumptions.assumeTrue(method != null, "Method not found by reflection: scanDevice");
-        Object target = ReflectionTestSupport.targetOrNullFor(method, DeviceServiceImpl.class);
-        if (!java.lang.reflect.Modifier.isStatic(method.getModifiers())) {
-            Assumptions.assumeTrue(target != null, "No default constructor: DeviceServiceImpl");
-        }
+        ReflectionTestSupport.InvocationPlan plan = ReflectionTestSupport.planInvocation(method, DeviceServiceImpl.class);
+        Assumptions.assumeTrue(plan.skipReason == null, plan.skipReason);
 
-        Object result = assertDoesNotThrow(() -> ReflectionTestSupport.invokeWithDefaults(method, target));
+        Object result = assertDoesNotThrow(() -> ReflectionTestSupport.invoke(method, plan.target, plan.args));
         if (method.getReturnType() != void.class && !method.getReturnType().isPrimitive()) {
             assertNotNull(result);
         }
@@ -121,12 +107,10 @@ class DeviceServiceImplTest {
     void test_scanCheckDevice__2params() throws Exception {
         Method method = ReflectionTestSupport.findMethod(DeviceServiceImpl.class, "scanCheckDevice", 2);
         Assumptions.assumeTrue(method != null, "Method not found by reflection: scanCheckDevice");
-        Object target = ReflectionTestSupport.targetOrNullFor(method, DeviceServiceImpl.class);
-        if (!java.lang.reflect.Modifier.isStatic(method.getModifiers())) {
-            Assumptions.assumeTrue(target != null, "No default constructor: DeviceServiceImpl");
-        }
+        ReflectionTestSupport.InvocationPlan plan = ReflectionTestSupport.planInvocation(method, DeviceServiceImpl.class);
+        Assumptions.assumeTrue(plan.skipReason == null, plan.skipReason);
 
-        Object result = assertDoesNotThrow(() -> ReflectionTestSupport.invokeWithDefaults(method, target));
+        Object result = assertDoesNotThrow(() -> ReflectionTestSupport.invoke(method, plan.target, plan.args));
         if (method.getReturnType() != void.class && !method.getReturnType().isPrimitive()) {
             assertNotNull(result);
         }
@@ -136,12 +120,10 @@ class DeviceServiceImplTest {
     void test_deleteDevice__3params() throws Exception {
         Method method = ReflectionTestSupport.findMethod(DeviceServiceImpl.class, "deleteDevice", 3);
         Assumptions.assumeTrue(method != null, "Method not found by reflection: deleteDevice");
-        Object target = ReflectionTestSupport.targetOrNullFor(method, DeviceServiceImpl.class);
-        if (!java.lang.reflect.Modifier.isStatic(method.getModifiers())) {
-            Assumptions.assumeTrue(target != null, "No default constructor: DeviceServiceImpl");
-        }
+        ReflectionTestSupport.InvocationPlan plan = ReflectionTestSupport.planInvocation(method, DeviceServiceImpl.class);
+        Assumptions.assumeTrue(plan.skipReason == null, plan.skipReason);
 
-        Object result = assertDoesNotThrow(() -> ReflectionTestSupport.invokeWithDefaults(method, target));
+        Object result = assertDoesNotThrow(() -> ReflectionTestSupport.invoke(method, plan.target, plan.args));
         if (method.getReturnType() != void.class && !method.getReturnType().isPrimitive()) {
             assertNotNull(result);
         }
@@ -151,12 +133,10 @@ class DeviceServiceImplTest {
     void test_deleteDeviceByMac__3params() throws Exception {
         Method method = ReflectionTestSupport.findMethod(DeviceServiceImpl.class, "deleteDeviceByMac", 3);
         Assumptions.assumeTrue(method != null, "Method not found by reflection: deleteDeviceByMac");
-        Object target = ReflectionTestSupport.targetOrNullFor(method, DeviceServiceImpl.class);
-        if (!java.lang.reflect.Modifier.isStatic(method.getModifiers())) {
-            Assumptions.assumeTrue(target != null, "No default constructor: DeviceServiceImpl");
-        }
+        ReflectionTestSupport.InvocationPlan plan = ReflectionTestSupport.planInvocation(method, DeviceServiceImpl.class);
+        Assumptions.assumeTrue(plan.skipReason == null, plan.skipReason);
 
-        Object result = assertDoesNotThrow(() -> ReflectionTestSupport.invokeWithDefaults(method, target));
+        Object result = assertDoesNotThrow(() -> ReflectionTestSupport.invoke(method, plan.target, plan.args));
         if (method.getReturnType() != void.class && !method.getReturnType().isPrimitive()) {
             assertNotNull(result);
         }
@@ -166,12 +146,10 @@ class DeviceServiceImplTest {
     void test_updateWifi__3params() throws Exception {
         Method method = ReflectionTestSupport.findMethod(DeviceServiceImpl.class, "updateWifi", 3);
         Assumptions.assumeTrue(method != null, "Method not found by reflection: updateWifi");
-        Object target = ReflectionTestSupport.targetOrNullFor(method, DeviceServiceImpl.class);
-        if (!java.lang.reflect.Modifier.isStatic(method.getModifiers())) {
-            Assumptions.assumeTrue(target != null, "No default constructor: DeviceServiceImpl");
-        }
+        ReflectionTestSupport.InvocationPlan plan = ReflectionTestSupport.planInvocation(method, DeviceServiceImpl.class);
+        Assumptions.assumeTrue(plan.skipReason == null, plan.skipReason);
 
-        Object result = assertDoesNotThrow(() -> ReflectionTestSupport.invokeWithDefaults(method, target));
+        Object result = assertDoesNotThrow(() -> ReflectionTestSupport.invoke(method, plan.target, plan.args));
         if (method.getReturnType() != void.class && !method.getReturnType().isPrimitive()) {
             assertNotNull(result);
         }

@@ -16,12 +16,10 @@ class GroupServiceImplTest {
     void test_getGroupList__3params() throws Exception {
         Method method = ReflectionTestSupport.findMethod(GroupServiceImpl.class, "getGroupList", 3);
         Assumptions.assumeTrue(method != null, "Method not found by reflection: getGroupList");
-        Object target = ReflectionTestSupport.targetOrNullFor(method, GroupServiceImpl.class);
-        if (!java.lang.reflect.Modifier.isStatic(method.getModifiers())) {
-            Assumptions.assumeTrue(target != null, "No default constructor: GroupServiceImpl");
-        }
+        ReflectionTestSupport.InvocationPlan plan = ReflectionTestSupport.planInvocation(method, GroupServiceImpl.class);
+        Assumptions.assumeTrue(plan.skipReason == null, plan.skipReason);
 
-        Object result = assertDoesNotThrow(() -> ReflectionTestSupport.invokeWithDefaults(method, target));
+        Object result = assertDoesNotThrow(() -> ReflectionTestSupport.invoke(method, plan.target, plan.args));
         if (method.getReturnType() != void.class && !method.getReturnType().isPrimitive()) {
             assertNotNull(result);
         }
@@ -31,12 +29,10 @@ class GroupServiceImplTest {
     void test_getGroupInfo__3params() throws Exception {
         Method method = ReflectionTestSupport.findMethod(GroupServiceImpl.class, "getGroupInfo", 3);
         Assumptions.assumeTrue(method != null, "Method not found by reflection: getGroupInfo");
-        Object target = ReflectionTestSupport.targetOrNullFor(method, GroupServiceImpl.class);
-        if (!java.lang.reflect.Modifier.isStatic(method.getModifiers())) {
-            Assumptions.assumeTrue(target != null, "No default constructor: GroupServiceImpl");
-        }
+        ReflectionTestSupport.InvocationPlan plan = ReflectionTestSupport.planInvocation(method, GroupServiceImpl.class);
+        Assumptions.assumeTrue(plan.skipReason == null, plan.skipReason);
 
-        Object result = assertDoesNotThrow(() -> ReflectionTestSupport.invokeWithDefaults(method, target));
+        Object result = assertDoesNotThrow(() -> ReflectionTestSupport.invoke(method, plan.target, plan.args));
         if (method.getReturnType() != void.class && !method.getReturnType().isPrimitive()) {
             assertNotNull(result);
         }
@@ -46,12 +42,10 @@ class GroupServiceImplTest {
     void test_addGroup__3params() throws Exception {
         Method method = ReflectionTestSupport.findMethod(GroupServiceImpl.class, "addGroup", 3);
         Assumptions.assumeTrue(method != null, "Method not found by reflection: addGroup");
-        Object target = ReflectionTestSupport.targetOrNullFor(method, GroupServiceImpl.class);
-        if (!java.lang.reflect.Modifier.isStatic(method.getModifiers())) {
-            Assumptions.assumeTrue(target != null, "No default constructor: GroupServiceImpl");
-        }
+        ReflectionTestSupport.InvocationPlan plan = ReflectionTestSupport.planInvocation(method, GroupServiceImpl.class);
+        Assumptions.assumeTrue(plan.skipReason == null, plan.skipReason);
 
-        Object result = assertDoesNotThrow(() -> ReflectionTestSupport.invokeWithDefaults(method, target));
+        Object result = assertDoesNotThrow(() -> ReflectionTestSupport.invoke(method, plan.target, plan.args));
         if (method.getReturnType() != void.class && !method.getReturnType().isPrimitive()) {
             assertNotNull(result);
         }
@@ -61,12 +55,10 @@ class GroupServiceImplTest {
     void test_modGroup__4params() throws Exception {
         Method method = ReflectionTestSupport.findMethod(GroupServiceImpl.class, "modGroup", 4);
         Assumptions.assumeTrue(method != null, "Method not found by reflection: modGroup");
-        Object target = ReflectionTestSupport.targetOrNullFor(method, GroupServiceImpl.class);
-        if (!java.lang.reflect.Modifier.isStatic(method.getModifiers())) {
-            Assumptions.assumeTrue(target != null, "No default constructor: GroupServiceImpl");
-        }
+        ReflectionTestSupport.InvocationPlan plan = ReflectionTestSupport.planInvocation(method, GroupServiceImpl.class);
+        Assumptions.assumeTrue(plan.skipReason == null, plan.skipReason);
 
-        Object result = assertDoesNotThrow(() -> ReflectionTestSupport.invokeWithDefaults(method, target));
+        Object result = assertDoesNotThrow(() -> ReflectionTestSupport.invoke(method, plan.target, plan.args));
         if (method.getReturnType() != void.class && !method.getReturnType().isPrimitive()) {
             assertNotNull(result);
         }
@@ -76,12 +68,10 @@ class GroupServiceImplTest {
     void test_deleteGroup__3params() throws Exception {
         Method method = ReflectionTestSupport.findMethod(GroupServiceImpl.class, "deleteGroup", 3);
         Assumptions.assumeTrue(method != null, "Method not found by reflection: deleteGroup");
-        Object target = ReflectionTestSupport.targetOrNullFor(method, GroupServiceImpl.class);
-        if (!java.lang.reflect.Modifier.isStatic(method.getModifiers())) {
-            Assumptions.assumeTrue(target != null, "No default constructor: GroupServiceImpl");
-        }
+        ReflectionTestSupport.InvocationPlan plan = ReflectionTestSupport.planInvocation(method, GroupServiceImpl.class);
+        Assumptions.assumeTrue(plan.skipReason == null, plan.skipReason);
 
-        Object result = assertDoesNotThrow(() -> ReflectionTestSupport.invokeWithDefaults(method, target));
+        Object result = assertDoesNotThrow(() -> ReflectionTestSupport.invoke(method, plan.target, plan.args));
         if (method.getReturnType() != void.class && !method.getReturnType().isPrimitive()) {
             assertNotNull(result);
         }
@@ -91,12 +81,10 @@ class GroupServiceImplTest {
     void test_addDeviceToGroup__4params() throws Exception {
         Method method = ReflectionTestSupport.findMethod(GroupServiceImpl.class, "addDeviceToGroup", 4);
         Assumptions.assumeTrue(method != null, "Method not found by reflection: addDeviceToGroup");
-        Object target = ReflectionTestSupport.targetOrNullFor(method, GroupServiceImpl.class);
-        if (!java.lang.reflect.Modifier.isStatic(method.getModifiers())) {
-            Assumptions.assumeTrue(target != null, "No default constructor: GroupServiceImpl");
-        }
+        ReflectionTestSupport.InvocationPlan plan = ReflectionTestSupport.planInvocation(method, GroupServiceImpl.class);
+        Assumptions.assumeTrue(plan.skipReason == null, plan.skipReason);
 
-        Object result = assertDoesNotThrow(() -> ReflectionTestSupport.invokeWithDefaults(method, target));
+        Object result = assertDoesNotThrow(() -> ReflectionTestSupport.invoke(method, plan.target, plan.args));
         if (method.getReturnType() != void.class && !method.getReturnType().isPrimitive()) {
             assertNotNull(result);
         }
@@ -106,12 +94,10 @@ class GroupServiceImplTest {
     void test_removeDeviceFromGroup__4params() throws Exception {
         Method method = ReflectionTestSupport.findMethod(GroupServiceImpl.class, "removeDeviceFromGroup", 4);
         Assumptions.assumeTrue(method != null, "Method not found by reflection: removeDeviceFromGroup");
-        Object target = ReflectionTestSupport.targetOrNullFor(method, GroupServiceImpl.class);
-        if (!java.lang.reflect.Modifier.isStatic(method.getModifiers())) {
-            Assumptions.assumeTrue(target != null, "No default constructor: GroupServiceImpl");
-        }
+        ReflectionTestSupport.InvocationPlan plan = ReflectionTestSupport.planInvocation(method, GroupServiceImpl.class);
+        Assumptions.assumeTrue(plan.skipReason == null, plan.skipReason);
 
-        Object result = assertDoesNotThrow(() -> ReflectionTestSupport.invokeWithDefaults(method, target));
+        Object result = assertDoesNotThrow(() -> ReflectionTestSupport.invoke(method, plan.target, plan.args));
         if (method.getReturnType() != void.class && !method.getReturnType().isPrimitive()) {
             assertNotNull(result);
         }

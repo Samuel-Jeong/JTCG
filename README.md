@@ -41,6 +41,13 @@ chmod +x ./generate-tests.sh
 ./generate-tests.sh /absolute/path/to/your/java/sources /absolute/path/to/output
 ```
 
+대상 프로젝트를 이미 빌드해두었다면(선택), 클래스패스를 함께 넘겨 **요청/응답 DTO 추론 정확도**를 높일 수 있습니다:
+
+```bash
+./generate-tests.sh /absolute/path/to/your/java/sources /absolute/path/to/output \
+  "/abs/project/build/classes/java/main:/abs/project/build/resources/main:/abs/project/build/libs/*"
+```
+
 ## 생성 규칙(현재 버전)
 
 * 입력 디렉터리 하위의 모든 `.java` 파일을 스캔하지만, **테스트 생성 대상은 아래 2종류로 제한**
@@ -51,15 +58,21 @@ chmod +x ./generate-tests.sh
 * 첫 번째로 발견되는 `class`/`interface`/`enum` 타입명을 기준으로 `XTest` 파일 생성
 * `@Service`:
   * `public` 메서드를 단순 정규식으로 추출하여 `@Test` 메서드를 생성
-  * 각 테스트는 리플렉션으로 해당 메서드를 찾은 뒤, "기본값" 인자(primitive는 0/false, `String`은 "", 그 외는 null)로 호출해
-    예외가 발생하지 않는지(`assertDoesNotThrow`)를 검증
-  * 대상 타입에 기본 생성자(무인자 생성자)가 없어서 인스턴스 생성이 불가능하면 해당 테스트는 실패 대신 `Assumptions`로 스킵
+  * 각 테스트는 리플렉션으로 해당 메서드를 찾은 뒤, 파라미터 타입에 따라 "안전한 기본값"을 만들어 호출합니다.
+    (예: primitive=0/false, `String`="", `Optional`=`Optional.empty()`, `List`=`List.of()` 등)
+  * 호출에 필요한 인자 생성이 불가능하거나, 대상 타입에 기본 생성자(무인자 생성자)가 없어 인스턴스 생성이 불가능하면
+    해당 테스트는 실패 대신 `Assumptions`로 스킵합니다(불안정 테스트 방지)
+  * 예외가 발생하지 않는지(`assertDoesNotThrow`)를 검증하고, 반환 타입이 객체면 `assertNotNull`을 추가합니다.
 * `@Controller` / `@RestController`:
-  * 메서드 바로 위의 매핑 어노테이션(`@GetMapping`, `@PostMapping`, `@RequestMapping` 등)을 단순 추출
-  * 추출된 엔드포인트에 대해 standalone `MockMvc` 기반으로 요청을 수행하고 `2xx` 응답을 기대
+  * 소스를 AST(JavaParser)로 파싱해 매핑 어노테이션(`@GetMapping`, `@PostMapping`, `@RequestMapping` 등)과 경로/HTTP 메서드를 추출
+  * 추출된 엔드포인트에 대해 스프링부트 `@WebMvcTest` 기반으로 `MockMvc` 요청을 수행하고 `2xx` 응답을 기대
+  * 컨트롤러의 `private final` 필드(또는 `@Autowired` 필드)에서 의존 타입을 매우 단순하게 추출해 `@MockBean`으로 선언합니다.
   * 경로에 `{id}` 같은 path variable이 있으면 기본값으로 치환하여 요청합니다(예: `/items/{id}` → `/items/1`)
-  * `POST`/`PUT`/`PATCH`는 기본으로 JSON `contentType`/`accept`을 설정하고 빈 바디(`{}`)를 넣습니다.
-  * 대상 타입에 기본 생성자(무인자 생성자)가 없으면 테스트는 `Assumptions`로 스킵
+  * `POST`/`PUT`/`PATCH`는 기본으로 JSON `contentType`/`accept`을 설정하고,
+    `@RequestBody` 파라미터 타입이 소스에서 추론 가능하면 DTO 필드를 전수 스캔해 간단한 샘플 JSON 바디를 생성합니다(추론 불가 시 `{}`).
+  * 응답 타입이 DTO로 추론 가능하면 `contentTypeCompatibleWith(JSON)` + `jsonPath(...).exists()` 형태로 **최소 구조 검증**을 자동 추가합니다.
+  * (참고) `@WebMvcTest`는 컨텍스트 기동을 위해 의존 빈 mocking이 필요합니다. 이 도구는 "추정"으로 `@MockBean`을 생성하므로,
+    실제 프로젝트 구조에 따라 추가/수정이 필요할 수 있습니다.
 
 ### 공통 유틸(중복 제거)
 
@@ -68,7 +81,6 @@ chmod +x ./generate-tests.sh
 * `com/jtcg/generated/support/ReflectionTestSupport.java`
   * Service 테스트의 리플렉션 호출/기본값 인자 생성
 * `com/jtcg/generated/support/ControllerTestSupport.java`
-  * Controller 테스트의 `MockMvc` 구성(기본 생성자 없으면 스킵)
   * path variable 기본값 치환
 
 > 주의: Java 문법 전체를 파싱하는 AST 기반이 아니라, 현재는 단순한 텍스트 기반 파싱입니다.
@@ -122,9 +134,12 @@ package com.example;
 
 import com.jtcg.generated.support.ControllerTestSupport;
 
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -132,15 +147,18 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+@WebMvcTest(controllers = HelloController.class)
+@AutoConfigureMockMvc(addFilters = false)
 class HelloControllerTest {
 
-    private MockMvc mockMvc() {
-        return ControllerTestSupport.mockMvcFor(HelloController.class);
-    }
+    @Autowired
+    private MockMvc mvc;
+
+    @MockBean
+    private FooService fooService;
 
     @Test
     void api_hello__0params__GET() throws Exception {
-        MockMvc mvc = mockMvc();
         String path = ControllerTestSupport.fillPathVariables("/hello");
         MockHttpServletRequestBuilder req = MockMvcRequestBuilders.get(path)
                 .accept(MediaType.APPLICATION_JSON);
@@ -161,3 +179,4 @@ java -jar build/libs/jtcg.jar --input /abs/path --output /abs/out
 * `--input` (필수): 절대 경로 디렉터리
 * `--output` (선택): 생성 파일 루트 디렉터리 (기본값: `./generated-tests`)
 * `--overwrite` (선택): 기존 파일이 있으면 덮어쓰기
+* `--classpath` (선택): 대상 프로젝트의 클래스패스(정확도 향상용)

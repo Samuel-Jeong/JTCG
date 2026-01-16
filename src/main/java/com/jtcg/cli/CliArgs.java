@@ -12,11 +12,13 @@ final class CliArgs {
     final String inputDir;
     final String outputDir;
     final boolean overwrite;
+    final String classpath;
 
-    private CliArgs(String inputDir, String outputDir, boolean overwrite) {
+    private CliArgs(String inputDir, String outputDir, boolean overwrite, String classpath) {
         this.inputDir = inputDir;
         this.outputDir = outputDir;
         this.overwrite = overwrite;
+        this.classpath = classpath;
     }
 
     /**
@@ -26,12 +28,14 @@ final class CliArgs {
      *   <li>{@code --input} (필수): 입력 디렉터리</li>
      *   <li>{@code --output} (선택): 출력 디렉터리(기본값: {@code ./generated-tests})</li>
      *   <li>{@code --overwrite} (선택): 기존 파일 덮어쓰기</li>
+     *   <li>{@code --classpath} (선택): 대상 프로젝트의 클래스패스</li>
      * </ul>
      */
     static CliArgs parse(String[] args) {
         String input = null;
         String output = "./generated-tests";
         boolean overwrite = false;
+        String classpath = null;
 
         for (int i = 0; i < args.length; i++) {
             String a = Objects.toString(args[i], "");
@@ -49,6 +53,12 @@ final class CliArgs {
                     output = args[++i];
                 }
                 case "--overwrite" -> overwrite = true;
+                case "--classpath" -> {
+                    if (i + 1 >= args.length) {
+                        usageAndExit("--classpath requires a value");
+                    }
+                    classpath = args[++i];
+                }
                 case "-h", "--help" -> usageAndExit(null);
                 default -> usageAndExit("Unknown argument: " + a);
             }
@@ -58,7 +68,7 @@ final class CliArgs {
             usageAndExit("--input is required");
         }
 
-        return new CliArgs(input, output, overwrite);
+        return new CliArgs(input, output, overwrite, classpath);
     }
 
     /**
@@ -70,7 +80,7 @@ final class CliArgs {
         if (error != null) {
             System.err.println("ERROR: " + error);
         }
-        System.err.println("Usage: java -jar jtcg.jar --input /abs/path [--output /abs/out] [--overwrite]");
+        System.err.println("Usage: java -jar jtcg.jar --input /abs/path [--output /abs/out] [--overwrite] [--classpath <cp>]");
         System.exit(error == null ? 0 : 2);
     }
 }

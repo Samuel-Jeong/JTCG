@@ -15,6 +15,8 @@ public record JavaEndpointInfo(
         String httpMethod,
         String fullPath,
         String javaMethodName,
-        int paramCount
+        int paramCount,
+        String requestBodyType,
+        String responseBodyType
 ) {
 }

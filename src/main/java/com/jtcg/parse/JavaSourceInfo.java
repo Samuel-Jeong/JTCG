@@ -19,6 +19,7 @@ public record JavaSourceInfo(
         String typeName,
         JavaComponentType componentType,
         List<JavaMethodInfo> publicMethods,
-        List<JavaEndpointInfo> endpoints
+        List<JavaEndpointInfo> endpoints,
+        List<String> injectedDependencyTypeNames
 ) {
 }

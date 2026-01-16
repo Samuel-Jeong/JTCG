@@ -16,12 +16,10 @@ class AgentMgtServiceImplTest {
     void test_getContractInfo__2params() throws Exception {
         Method method = ReflectionTestSupport.findMethod(AgentMgtServiceImpl.class, "getContractInfo", 2);
         Assumptions.assumeTrue(method != null, "Method not found by reflection: getContractInfo");
-        Object target = ReflectionTestSupport.targetOrNullFor(method, AgentMgtServiceImpl.class);
-        if (!java.lang.reflect.Modifier.isStatic(method.getModifiers())) {
-            Assumptions.assumeTrue(target != null, "No default constructor: AgentMgtServiceImpl");
-        }
+        ReflectionTestSupport.InvocationPlan plan = ReflectionTestSupport.planInvocation(method, AgentMgtServiceImpl.class);
+        Assumptions.assumeTrue(plan.skipReason == null, plan.skipReason);
 
-        Object result = assertDoesNotThrow(() -> ReflectionTestSupport.invokeWithDefaults(method, target));
+        Object result = assertDoesNotThrow(() -> ReflectionTestSupport.invoke(method, plan.target, plan.args));
         if (method.getReturnType() != void.class && !method.getReturnType().isPrimitive()) {
             assertNotNull(result);
         }
@@ -31,12 +29,10 @@ class AgentMgtServiceImplTest {
     void test_getDeviceList__2params() throws Exception {
         Method method = ReflectionTestSupport.findMethod(AgentMgtServiceImpl.class, "getDeviceList", 2);
         Assumptions.assumeTrue(method != null, "Method not found by reflection: getDeviceList");
-        Object target = ReflectionTestSupport.targetOrNullFor(method, AgentMgtServiceImpl.class);
-        if (!java.lang.reflect.Modifier.isStatic(method.getModifiers())) {
-            Assumptions.assumeTrue(target != null, "No default constructor: AgentMgtServiceImpl");
-        }
+        ReflectionTestSupport.InvocationPlan plan = ReflectionTestSupport.planInvocation(method, AgentMgtServiceImpl.class);
+        Assumptions.assumeTrue(plan.skipReason == null, plan.skipReason);
 
-        Object result = assertDoesNotThrow(() -> ReflectionTestSupport.invokeWithDefaults(method, target));
+        Object result = assertDoesNotThrow(() -> ReflectionTestSupport.invoke(method, plan.target, plan.args));
         if (method.getReturnType() != void.class && !method.getReturnType().isPrimitive()) {
             assertNotNull(result);
         }
@@ -46,12 +42,10 @@ class AgentMgtServiceImplTest {
     void test_getDeviceInfo__2params() throws Exception {
         Method method = ReflectionTestSupport.findMethod(AgentMgtServiceImpl.class, "getDeviceInfo", 2);
         Assumptions.assumeTrue(method != null, "Method not found by reflection: getDeviceInfo");
-        Object target = ReflectionTestSupport.targetOrNullFor(method, AgentMgtServiceImpl.class);
-        if (!java.lang.reflect.Modifier.isStatic(method.getModifiers())) {
-            Assumptions.assumeTrue(target != null, "No default constructor: AgentMgtServiceImpl");
-        }
+        ReflectionTestSupport.InvocationPlan plan = ReflectionTestSupport.planInvocation(method, AgentMgtServiceImpl.class);
+        Assumptions.assumeTrue(plan.skipReason == null, plan.skipReason);
 
-        Object result = assertDoesNotThrow(() -> ReflectionTestSupport.invokeWithDefaults(method, target));
+        Object result = assertDoesNotThrow(() -> ReflectionTestSupport.invoke(method, plan.target, plan.args));
         if (method.getReturnType() != void.class && !method.getReturnType().isPrimitive()) {
             assertNotNull(result);
         }
