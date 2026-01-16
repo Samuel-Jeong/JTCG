@@ -80,8 +80,8 @@ flowchart LR
   SRC --> TYPE["첫 번째 타입명(class/interface/enum)"]
   SRC --> ANN["어노테이션 확인<br/>Controller/Service만 대상"]
 
-  ANN -->|Service| S["정규식으로 public 메서드 추출<br/>리플렉션 호출 테스트 생성<br/>불가능하면 Assumptions로 스킵"]
-  ANN -->|Controller| C["JavaParser(AST)로 Mapping 추출<br/>@WebMvcTest + MockMvc 2xx 기대<br/>DTO 추론 시 최소 JSON/JsonPath 검증"]
+  ANN -->|Service| S["정규식으로 <br/>public 메서드 추출<br/>리플렉션 호출 <br/>테스트 생성<br/>불가능하면 <br/>Assumptions로 스킵"]
+  ANN -->|Controller| C["JavaParser(AST)로 <br/>Mapping 추출<br/>@WebMvcTest + MockMvc <br/>2xx 기대<br/>DTO 추론 시 <br/>최소 JSON/JsonPath 검증"]
 ```
 
 ## 요구 사항
