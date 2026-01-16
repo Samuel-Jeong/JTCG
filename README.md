@@ -6,6 +6,26 @@
 * 순수 Java 코드 기반
 * 편하게 쓰도록 실행 스크립트 포함
 
+## 전체 구조 다이어그램 (CLI → 스캔 → 분류 → 생성 → 출력)
+```mermaid
+flowchart LR
+  U["사용자"] --> SH["generate-tests.sh<br/>- 인자: 소스 경로 / 출력 경로(옵션) / 클래스패스(옵션)"]
+  SH --> JAR["jtcg.jar (CLI)<br/>Java 17+ / Gradle 빌드 산출물"] 
+
+  JAR --> SCAN["SourceScanner<br/>- 입력 디렉터리 하위 .java 재귀 스캔"]
+  SCAN --> PARSE["SourceParser / Analyzer<br/>- package 읽기<br/>- 1번째 타입명(class/interface/enum) 추출"]
+  PARSE --> CLASSIFY["TargetClassifier<br/>- @Controller/@RestController<br/>- @Service<br/>- OTHER(생성 제외)"]
+
+  CLASSIFY -->|Controller| CGEN["ControllerTestGenerator<br/>- JavaParser(AST)로 매핑 추출<br/>- @WebMvcTest + MockMvc 테스트 생성"]
+  CLASSIFY -->|Service| SGEN["ServiceTestGenerator<br/>- public 메서드 정규식 추출<br/>- 리플렉션 호출 + 안전한 기본값 인자"]
+  CLASSIFY -->|OTHER| SKIP["Skip<br/>테스트 파일 생성 안 함"]
+
+  CGEN --> OUT["OutputWriter<br/>- 동일 package 경로로 XTest 생성<br/>- generated-tests 아래 출력"]
+  SGEN --> OUT
+
+  OUT --> SUP["SupportGenerator<br/>- 공통 유틸 1회 생성<br/>ReflectionTestSupport / ControllerTestSupport"]
+```
+
 ## 요구 사항
 
 * Java 17+
