@@ -26,6 +26,64 @@ flowchart LR
   OUT --> SUP["SupportGenerator<br/>- 공통 유틸 1회 생성<br/>ReflectionTestSupport / ControllerTestSupport"]
 ```
 
+## 동작 시퀀스 (실행부터 파일 생성까지)
+```mermaid
+sequenceDiagram
+  autonumber
+  participant U as User
+  participant SH as generate-tests.sh
+  participant CLI as JTCG (jtcg.jar)
+  participant FS as FileSystem
+  participant SC as SourceScanner
+  participant CL as TargetClassifier
+  participant SG as ServiceTestGenerator
+  participant CG as ControllerTestGenerator
+  participant OW as OutputWriter
+  participant SUP as SupportGenerator
+
+  U->>SH: ./generate-tests.sh <src> [out] [classpath]
+  SH->>CLI: java -jar jtcg.jar (args 전달)
+  CLI->>SC: 입력 경로 스캔 시작
+  SC->>FS: .java 파일 재귀 탐색/읽기
+  FS-->>SC: 소스 텍스트 반환
+  SC->>CL: 어노테이션/타입/패키지 기반 분류
+  alt @Service
+    CL->>SG: public 메서드 추출<br/>테스트 스켈레톤 생성
+    SG->>OW: XServiceTest.java write
+  else @Controller/@RestController
+    CL->>CG: JavaParser(AST) 파싱<br/>Mapping/DTO 추론<br/>MockMvc 테스트 생성
+    CG->>OW: XControllerTest.java write
+  else OTHER
+    CL-->>CLI: 생성 대상 아님(스킵)
+  end
+  OW->>SUP: 공통 유틸 필요 여부 확인
+  SUP->>OW: ReflectionTestSupport / ControllerTestSupport 생성
+  OW->>FS: generated-tests 경로로 파일 저장
+```
+
+## 생성 산출물(폴더/파일) 구조 다이어그램
+```mermaid
+flowchart TB
+  ROOT["output root<br/>(기본: ./generated-tests)"] --> PKG["원본 package 경로 그대로 생성<br/>예: com/example/..."]
+  PKG --> T1["XxxServiceTest.java<br/>(Service 대상)"]
+  PKG --> T2["XxxControllerTest.java<br/>(Controller 대상)"]
+
+  ROOT --> SUPDIR["com/jtcg/generated/support"]
+  SUPDIR --> RFS["ReflectionTestSupport.java<br/>- 리플렉션 호출/기본값 인자 생성"]
+  SUPDIR --> CTS["ControllerTestSupport.java<br/>- path variable 기본값 치환"]
+```
+
+## 생성 규칙 요약을 구조에 “정확히” 매핑한 미니 다이어그램
+```mermaid
+flowchart LR
+  SRC[".java 파일"] --> PKG["package 선언 읽기"]
+  SRC --> TYPE["첫 번째 타입명(class/interface/enum)"]
+  SRC --> ANN["어노테이션 확인<br/>Controller/Service만 대상"]
+
+  ANN -->|Service| S["정규식으로 public 메서드 추출<br/>리플렉션 호출 테스트 생성<br/>불가능하면 Assumptions로 스킵"]
+  ANN -->|Controller| C["JavaParser(AST)로 Mapping 추출<br/>@WebMvcTest + MockMvc 2xx 기대<br/>DTO 추론 시 최소 JSON/JsonPath 검증"]
+```
+
 ## 요구 사항
 
 * Java 17+
